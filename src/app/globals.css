@@ -2,26 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@font-face {
+  font-family: "Whitney";
+  src: url("/fonts/Whitney-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Whitney";
+  src: url("/fonts/Whitney-Book.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Whitney";
+  src: url("/fonts/Whitney-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Whitney";
+  src: url("/fonts/Whitney-Semibold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Whitney";
+  src: url("/fonts/Whitney-Black.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: block;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #ffffff;
+  --foreground: #000000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 17px;
 }
 
 body {
+  font-family: "Whitney", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.7;
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+input,
+button,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* Tap-target ondergrens op touch */
+@media (max-width: 768px) {
+  html {
+    font-size: 16px;
   }
+}
+
+/* Eyebrow / tier-label */
+.eyebrow {
+  font-size: 0.78rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #8a827c;
+  font-weight: 400;
+}
+
+/* Button-tekst label */
+.btn-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* Number-input chrome opruimen voor decimal velden */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }
