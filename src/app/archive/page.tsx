@@ -27,20 +27,20 @@ type Row = {
 type SearchParams = Promise<Record<string, string | undefined>>
   | Record<string, string | undefined>;
 
-function applySort(
-  query: ReturnType<ReturnType<typeof createSupabaseServerClient>["from"]>,
-  sort: ArchiveSort,
-) {
+function sortClause(sort: ArchiveSort): {
+  column: string;
+  ascending: boolean;
+} {
   switch (sort) {
     case "oldest":
-      return query.order("completed_at", { ascending: true, nullsFirst: false });
+      return { column: "completed_at", ascending: true };
     case "serial_asc":
-      return query.order("serial_number", { ascending: true });
+      return { column: "serial_number", ascending: true };
     case "serial_desc":
-      return query.order("serial_number", { ascending: false });
+      return { column: "serial_number", ascending: false };
     case "recent":
     default:
-      return query.order("completed_at", { ascending: false, nullsFirst: false });
+      return { column: "completed_at", ascending: false };
   }
 }
 
@@ -71,7 +71,11 @@ export default async function ArchivePage({
     query = query.lte("completed_at", `${archive.to}T23:59:59Z`);
   }
 
-  query = applySort(query, archive.sort);
+  const sort = sortClause(archive.sort);
+  query = query.order(sort.column, {
+    ascending: sort.ascending,
+    nullsFirst: false,
+  });
 
   const offset = (archive.page - 1) * archive.pageSize;
   query = query.range(offset, offset + archive.pageSize - 1);
