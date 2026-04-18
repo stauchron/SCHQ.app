@@ -95,7 +95,7 @@ export default async function ArchivePage({
     .range(offset, offset + archive.pageSize - 1);
   const rows = ((data ?? []) as unknown as Row[]) ?? [];
   const total = count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / archive.pageSize));
+  con.order(sort.column, { ascending: sort.ascending })
 
   const exportUrl = (() => {
     const sp = new URLSearchParams();
