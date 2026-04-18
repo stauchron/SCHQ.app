@@ -46,6 +46,29 @@ function sortClause(sort: ArchiveSort): {
   }
 }
 
+type FilterableBuilder = {
+  or: (filter: string) => FilterableBuilder;
+  gte: (column: string, value: string) => FilterableBuilder;
+  lte: (column: string, value: string) => FilterableBuilder;
+};
+function applyFilters<T extends FilterableBuilder>(
+  builder: T,
+  q: string,
+  from: string | null,
+  to: string | null,
+): T {
+  let next = builder;
+  if (q) {
+    const term = `%${q}%`;
+    next = next.or(
+      `serial_number.ilike.${term},sku.ilike.${term},model_name.ilike.${term}`,
+    ) as T;
+  }
+  if (from) next = next.gte("completed_at", `${from}T00:00:00Z`) as T;
+  if (to) next = next.lte("completed_at", `${to}T23:59:59Z`) as T;
+  return next;
+}
+
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
   const archive = parseArchiveParams({
@@ -56,30 +79,22 @@ export async function GET(request: NextRequest) {
   });
 
   const supabase = createSupabaseServerClient();
-  let query = supabase
-    .from("archived_sessions_view")
-    .select("*")
-    .limit(10_000);
-
-  if (archive.q) {
-    const term = `%${archive.q}%`;
-    query = query.or(
-      `serial_number.ilike.${term},sku.ilike.${term},model_name.ilike.${term}`,
-    );
-  }
-  if (archive.from) {
-    query = query.gte("completed_at", `${archive.from}T00:00:00Z`);
-  }
-  if (archive.to) {
-    query = query.lte("completed_at", `${archive.to}T23:59:59Z`);
-  }
   const sort = sortClause(archive.sort);
-  query = query.order(sort.column, {
+
+  const filtered = applyFilters(
+    supabase
+      .from("archived_sessions_view")
+      .select("*")
+      .limit(10_000),
+    archive.q,
+    archive.from,
+    archive.to,
+  );
+
+  const { data, error } = await filtered.order(sort.column, {
     ascending: sort.ascending,
     nullsFirst: false,
   });
-
-  const { data, error } = await query;
   if (error) {
     return new Response(`Error: ${error.message}`, { status: 500 });
   }

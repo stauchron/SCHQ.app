@@ -44,6 +44,31 @@ function sortClause(sort: ArchiveSort): {
   }
 }
 
+// Generic filter-applier — behoudt het builder-type zodat .order/.range
+// daarna nog te chainen zijn zonder type-narrowing.
+type FilterableBuilder = {
+  or: (filter: string) => FilterableBuilder;
+  gte: (column: string, value: string) => FilterableBuilder;
+  lte: (column: string, value: string) => FilterableBuilder;
+};
+function applyFilters<T extends FilterableBuilder>(
+  builder: T,
+  q: string,
+  from: string | null,
+  to: string | null,
+): T {
+  let next = builder;
+  if (q) {
+    const term = `%${q}%`;
+    next = next.or(
+      `serial_number.ilike.${term},sku.ilike.${term},model_name.ilike.${term}`,
+    ) as T;
+  }
+  if (from) next = next.gte("completed_at", `${from}T00:00:00Z`) as T;
+  if (to) next = next.lte("completed_at", `${to}T23:59:59Z`) as T;
+  return next;
+}
+
 export default async function ArchivePage({
   searchParams,
 }: {
@@ -53,34 +78,21 @@ export default async function ArchivePage({
   const archive = parseArchiveParams(params);
   const supabase = createSupabaseServerClient();
 
-  let query = supabase
-    .from("archived_sessions_view")
-    .select("*", { count: "exact" });
-
-  if (archive.q) {
-    // Search across serial_number, sku, model_name (ILIKE met pg_trgm-index)
-    const term = `%${archive.q}%`;
-    query = query.or(
-      `serial_number.ilike.${term},sku.ilike.${term},model_name.ilike.${term}`,
-    );
-  }
-  if (archive.from) {
-    query = query.gte("completed_at", `${archive.from}T00:00:00Z`);
-  }
-  if (archive.to) {
-    query = query.lte("completed_at", `${archive.to}T23:59:59Z`);
-  }
-
   const sort = sortClause(archive.sort);
-  query = query.order(sort.column, {
-    ascending: sort.ascending,
-    nullsFirst: false,
-  });
-
   const offset = (archive.page - 1) * archive.pageSize;
-  query = query.range(offset, offset + archive.pageSize - 1);
 
-  const { data, count, error } = await query;
+  const filtered = applyFilters(
+    supabase
+      .from("archived_sessions_view")
+      .select("*", { count: "exact" }),
+    archive.q,
+    archive.from,
+    archive.to,
+  );
+
+  const { data, count, error } = await filtered
+    .order(sort.column, { ascending: sort.ascending, nullsFirst: false })
+    .range(offset, offset + archive.pageSize - 1);
   const rows = ((data ?? []) as unknown as Row[]) ?? [];
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / archive.pageSize));
